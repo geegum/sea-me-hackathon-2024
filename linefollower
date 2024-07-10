@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+import rospy
+import cv2
+import numpy as np
+from std_msgs.msg import Float32
+
+# 카메라 설정
+cap = cv2.VideoCapture(0)
+if not cap.isOpened():
+    raise IOError("카메라를 열 수 없습니다.")
+
+# ROS 노드 설정
+rospy.init_node('line_tracer', anonymous=True)
+pub_steering = rospy.Publisher('/Steering', Float32, queue_size=1)
+pub_throttle = rospy.Publisher('/Throttle', Float32, queue_size=1)
+
+def process_image(frame):
+    # 이미지 처리
+    img = cv2.resize(frame, (300, 300))
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY_INV)
+    
+    # 이진화 이미지 분석
+    h, w = binary.shape
+    left = binary[int(h/2):, :int(w/2)]
+    right = binary[int(h/2):, int(w/2):]
+    left_sum = np.sum(left == 255)
+    right_sum = np.sum(right == 255)
+    
+    # 제어 계산
+    steering_value = (right_sum - left_sum) / (left_sum + right_sum) if (left_sum + right_sum) != 0 else 0
+    steering_normalized = max(min(steering_value, 1), -1)  # -1과 1 사이로 제한
+    
+    throttle_value = np.sum(binary == 255) / (w * h / 2)  # 전체 픽셀 대비 흰색 픽셀의 비율
+    throttle_normalized = min(throttle_value, 0.2)  # 0.2로 제한
+
+    return steering_normalized, throttle_normalized
+
+def main():
+    rate = rospy.Rate(10)  # 10Hz
+    while not rospy.is_shutdown():
+        ret, frame = cap.read()
+        if not ret:
+            rospy.logwarn("카메라에서 이미지를 읽어올 수 없습니다.")
+            continue
+        
+        steering, throttle = process_image(frame)
+        pub_steering.publish(Float32(steering))
+        pub_throttle.publish(Float32(throttle))
+        
+        rate.sleep()
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    main()
