@@ -14,25 +14,56 @@ rospy.init_node('line_tracer', anonymous=True)
 pub_steering = rospy.Publisher('/Steering', Float32, queue_size=1)
 pub_throttle = rospy.Publisher('/Throttle', Float32, queue_size=1)
 
+# 트랙바 콜백 함수
+def nothing(x):
+    pass
+
+# 트랙바 생성
+cv2.namedWindow('HSV Trackbars')
+cv2.createTrackbar('L-H', 'HSV Trackbars', 0, 180, nothing)
+cv2.createTrackbar('L-S', 'HSV Trackbars', 0, 255, nothing)
+cv2.createTrackbar('L-V', 'HSV Trackbars', 0, 255, nothing)
+cv2.createTrackbar('H-H', 'HSV Trackbars', 0, 180, nothing)
+cv2.createTrackbar('H-S', 'HSV Trackbars', 0, 255, nothing)
+cv2.createTrackbar('H-V', 'HSV Trackbars', 0, 255, nothing)
+
+# 가중치 설정
+steering_weight = 1.5  # 스티어링 가중치
+throttle_weight = 0.1  # 쓰로틀 가중치
+
 def process_image(frame):
-    # 이미지 처리
-    img = cv2.resize(frame, (300, 300))
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY_INV)
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
-    # 이진화 이미지 분석
+    # 트랙바에서 HSV 범위 읽기
+    l_h = cv2.getTrackbarPos('L-H', 'HSV Trackbars')
+    l_s = cv2.getTrackbarPos('L-S', 'HSV Trackbars')
+    l_v = cv2.getTrackbarPos('L-V', 'HSV Trackbars')
+    h_h = cv2.getTrackbarPos('H-H', 'HSV Trackbars')
+    h_s = cv2.getTrackbarPos('H-S', 'HSV Trackbars')
+    h_v = cv2.getTrackbarPos('H-V', 'HSV Trackbars')
+    lower_hsv = np.array([l_h, l_s, l_v])
+    upper_hsv = np.array([h_h, h_s, h_v])
+    
+    mask = cv2.inRange(hsv, lower_hsv, upper_hsv)
+    result = cv2.bitwise_and(frame, frame, mask=mask)
+    
+    # 이진화 및 제어 계산
+    binary = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)[1]
     h, w = binary.shape
-    left = binary[int(h/2):, :int(w/2)]
-    right = binary[int(h/2):, int(w/2):]
+    left = binary[:, :int(w/2)]
+    right = binary[:, int(w/2):]
     left_sum = np.sum(left == 255)
     right_sum = np.sum(right == 255)
     
-    # 제어 계산
     steering_value = (right_sum - left_sum) / (left_sum + right_sum) if (left_sum + right_sum) != 0 else 0
-    steering_normalized = max(min(steering_value, 1), -1)  # -1과 1 사이로 제한
+    steering_normalized = max(min(steering_value * steering_weight, 1), -1)
     
-    throttle_value = np.sum(binary == 255) / (w * h / 2)  # 전체 픽셀 대비 흰색 픽셀의 비율
-    throttle_normalized = min(throttle_value, 0.2)  # 0.2로 제한
+    throttle_value = np.sum(binary == 255) / (w * h)  # 전체 픽셀 대비 흰색 픽셀의 비율
+    throttle_normalized = min(throttle_value * throttle_weight, 0.2)
+
+    cv2.imshow('Frame', frame)
+    cv2.imshow('Mask', mask)
+    cv2.imshow('Result', result)
 
     return steering_normalized, throttle_normalized
 
@@ -48,7 +79,8 @@ def main():
         pub_steering.publish(Float32(steering))
         pub_throttle.publish(Float32(throttle))
         
-        rate.sleep()
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
     cap.release()
     cv2.destroyAllWindows()
