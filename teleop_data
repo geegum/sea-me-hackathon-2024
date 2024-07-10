@@ -2,6 +2,7 @@
 import rospy
 from sensor_msgs.msg import Joy
 from std_msgs.msg import Float32
+from datetime import datetime
 
 MAX_SPEED = 0.2
 pub_steering = rospy.Publisher('/Steering', Float32, queue_size=1)
@@ -23,7 +24,8 @@ def callback_joy(joy_msg):
     
     # 파일에 데이터 저장
     with open(file_path, "a") as file:
-        file.write(f"steering: {steering}, throttle: {throttle}\n")
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        file.write(f"{current_time}, steering: {steering}, throttle: {throttle}\n")
 
 def main():
     rospy.init_node('teleop', anonymous=False)
