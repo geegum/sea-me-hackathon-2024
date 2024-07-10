@@ -1,3 +1,66 @@
-python server.py 
-  File "server.py", line 4
-SyntaxError: Non-ASCII character '\xec' in file server.py on line 4, but no encoding declared; see http://python.org/dev/peps/pep-0263/ for details
+#!/usr/bin/env python3
+import rospy
+from sensor_msgs.msg import Joy, Image
+from std_msgs.msg import Float32
+import cv2
+from cv_bridge import CvBridge
+import rosbag
+
+# Constants
+MAX_SPEED = 0.2
+
+# Publishers
+pub_steering = rospy.Publisher('/Steering', Float32, queue_size=1)
+pub_throttle = rospy.Publisher('/Throttle', Float32, queue_size=1)
+
+# Initialize CV bridge
+bridge = CvBridge()
+
+# Initialize bag file for recording
+bag = rosbag.Bag('output.bag', 'w')
+
+def callback_joy(joy_msg):
+    rospy.loginfo("steering: %f", -joy_msg.axes[2])
+    rospy.loginfo("throttle: %f", joy_msg.axes[1])
+    pub_steering.publish(-joy_msg.axes[2])
+    if joy_msg.axes[1] < 0:
+        weight = MAX_SPEED * 1.3
+    else:
+        weight = MAX_SPEED
+    pub_throttle.publish(joy_msg.axes[1] * weight)
+    
+    # Record the joy message
+    bag.write('/joy', joy_msg)
+
+def main():
+    rospy.init_node('teleop', anonymous=False)
+    rospy.loginfo('teleop node initiated!')
+    rospy.Subscriber("/joy", Joy, callback_joy)
+
+    # Open webcam
+    cap = cv2.VideoCapture(0)
+
+    if not cap.isOpened():
+        rospy.logerr("Cannot open webcam")
+        return
+
+    rate = rospy.Rate(10)  # 10 Hz
+    while not rospy.is_shutdown():
+        ret, frame = cap.read()
+        if not ret:
+            rospy.logerr("Failed to capture image")
+            continue
+        
+        # Convert OpenCV image to ROS Image message
+        image_msg = bridge.cv2_to_imgmsg(frame, encoding="bgr8")
+
+        # Publish and record image message
+        bag.write('/webcam/image_raw', image_msg)
+
+        rate.sleep()
+
+    cap.release()
+    bag.close()
+
+if __name__ == "__main__":
+    main()
