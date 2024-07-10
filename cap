@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+
+import rospy
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+import cv2
+import os
+from datetime import datetime
+
+def image_callback(msg):
+    try:
+        # Convert ROS Image message to OpenCV image
+        cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+    except CvBridgeError as e:
+        rospy.logerr(f"Could not convert image: {e}")
+        return
+
+    # Get current time for the filename
+    current_time = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    filename = os.path.join(save_path, f"{current_time}.jpg")
+
+    # Save image to the specified path
+    cv2.imwrite(filename, cv_image)
+    rospy.loginfo(f"Saved image: {filename}")
+
+if __name__ == '__main__':
+    rospy.init_node('webcam_capture', anonymous=True)
+
+    # Parameters
+    image_topic = rospy.get_param("~image_topic", "/usb_cam/image_raw")
+    save_path = rospy.get_param("~save_path", "/home/jetson/catkin_ws/video")
+
+    # Ensure the save path exists
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    # Initialize the CvBridge class
+    bridge = CvBridge()
+
+    # Subscribe to the image topic
+    rospy.Subscriber(image_topic, Image, image_callback)
+
+    # Set rate to 10Hz
+    rate = rospy.Rate(10)
+
+    rospy.loginfo("Webcam capture node started.")
+    rospy.spin()
