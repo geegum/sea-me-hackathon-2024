@@ -1,0 +1,3 @@
+python server.py 
+  File "server.py", line 4
+SyntaxError: Non-ASCII character '\xec' in file server.py on line 4, but no encoding declared; see http://python.org/dev/peps/pep-0263/ for details
