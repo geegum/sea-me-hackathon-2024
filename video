@@ -1,0 +1,17 @@
+import rospy
+import rosbag
+
+def callback(msg, bag):
+    bag.write('topic_name', msg)
+
+def auto_record():
+    rospy.init_node('auto_record')
+    bag = rosbag.Bag('output.bag', 'w')
+
+    rospy.Subscriber('topic_name', MessageType, lambda msg: callback(msg, bag))
+
+    rospy.spin()
+    bag.close()
+
+if __name__ == '__main__':
+    auto_record()
