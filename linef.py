@@ -108,7 +108,7 @@ if cap.isOpened():                      # 캡쳐 객체 연결 확인
         
         # Throttle 계산
         if abs(lineDetect) < gijun:
-            Throttle = 1.0 - (abs(lineDetect) / gijun) * 0.8  # 1에서 0.2까지 비례적으로 감소
+            Throttle = 0.4 - (abs(lineDetect) / gijun) * 0.2  # 1에서 0.2까지 비례적으로 감소
         else:
             Throttle = 0.2
         
