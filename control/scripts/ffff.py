@@ -22,24 +22,29 @@ def get_trackbar_values():
     return values
 
 def calculate_steering_direction(thresh):
-    weighted_vertical = np.arange(300).reshape(300,1)
+    weighted_vertical = np.arange(height).reshape(height, 1)
     sum_weights = np.sum(thresh / 255 * weighted_vertical, axis=0)
-    direction = np.dot(sum_weights, (np.arange(300) - 150)**3) / 1000000
+    direction = np.dot(sum_weights, (np.arange(width) - width / 2)**3) / 1000000
     return direction
 
 initialize_trackbars()
 cap = cv2.VideoCapture(0)
 
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
 if not cap.isOpened():
-    print("Can't open camera.")
+    print("카메라를 열 수 없습니다.")
     exit()
 
+line_direction_max = float('-inf')
+line_direction_min = float('inf')
 last_time = time.time()
 
 while True:
     ret, frame = cap.read()
     if not ret:
-        print('No frame')
+        print('프레임이 없습니다')
         break
 
     frame_resized = cv2.resize(frame, (300, 300))
@@ -53,16 +58,18 @@ while True:
     line_direction = calculate_steering_direction(mask)
     steering_d = np.clip(line_direction / 20, -0.5, 0.5)
 
+    line_direction_max = max(line_direction_max, line_direction)
+    line_direction_min = min(line_direction_min, line_direction)
+
     Throttle = 0.23
     car.steering = steering_d
     car.throttle = Throttle
 
-    # Calculate and print frequency
     current_time = time.time()
     elapsed_time = current_time - last_time
     last_time = current_time
     frequency = 1 / elapsed_time if elapsed_time else 0
-    print(f"lineDirection: {line_direction}, steering_d: {steering_d}, Throttle: {Throttle}, Frequency: {frequency:.2f} Hz")
+    print(f"lineDirection: {line_direction}, steering_d: {steering_d}, Throttle: {Throttle}, Frequency: {frequency:.2f} Hz, Max: {line_direction_max}, Min: {line_direction_min}")
 
     cv2.imshow('camera', frame_resized)
     cv2.imshow('mask', mask)
@@ -70,6 +77,7 @@ while True:
     if cv2.waitKey(1) != -1:
         car.steering = 0
         car.throttle = 0
+        print(f"최대 lineDirection: {line_direction_max}, 최소 lineDirection: {line_direction_min}")
         break
 
 cap.release()
