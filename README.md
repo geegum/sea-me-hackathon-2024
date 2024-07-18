@@ -1,5 +1,7 @@
 # 2024 SEA:ME Hackathon<br>
 
+sudo sh -c 'echo 100 > /sys/devices/pwm-fan/target_pwm'
+
 During this hackathon, your mission is to develop a autonomous driving system based on JetRacer Pro. We'll provide you a Nvidia Jetson nano embedded board. 
 
 ![image](https://github.com/AveesLab/sea-me-hackathon-2024/assets/117966644/038d2832-94b0-416d-af1e-464430ddb012)
@@ -272,14 +274,21 @@ ros-$ROS_DISTRO-image-transport ros-$ROS_DISTRO-image-publisher  libusb-1.0-0-de
 
 
 git clone https://github.com/libuvc/libuvc.git
+
 cd libuvc
+
 mkdir build && cd build
+
 cmake .. && make -j4
+
 sudo make install
+
 sudo ldconfig
 
 cs
- git clone https://github.com/orbbec/ros_astra_camera.git
+
+
+git clone https://github.com/orbbec/ros_astra_camera.git
 
 cm
 
