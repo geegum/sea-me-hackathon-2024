@@ -314,3 +314,135 @@ roslaunch astra_camera astra.launch
 
 
 
+#after seame
+
+#check  https://whiteknight3672.tistory.com/316
+
+# https://velog.io/@leedohyung28/Jetson-Nano-YOLOv5-OpenCV-%EC%84%A4%EC%B9%98%ED%95%98%EA%B8%B0
+
+#https://sehooni.github.io/jetson/projects/Jetson_CUDA_Build/#4-opencv-450-with-cuda
+
+sudo apt-get update
+
+sudo apt-get upgrade
+
+sudo apt-get install nano
+
+sudo apt-get install dphys-swapfile
+
+# dphys-swapfile을 설치
+
+$ sudo apt-get install dphys-swapfile
+
+## 두 Swap 파일의 값이 다음과 같도록 값을 추가하거나, 파일 내 주석 해제
+
+# CONF_SWAPSIZE=4096
+
+# CONF_SWAPFACTOR=2
+
+# CONF_MAXSWAP=4096
+
+
+
+
+# /sbin/dphys-swapfile를 엽니다.
+
+$ sudo nano /sbin/dphys-swapfile
+ 
+## 두 Swap 파일의 값이 다음과 같도록 값을 추가하거나, 파일 내 주석 해제
+
+# CONF_SWAPSIZE=4096
+
+# CONF_SWAPFACTOR=2
+
+# CONF_MAXSWAP=4096
+
+
+sudo reboot
+
+free -m
+
+wget https://github.com/Qengineering/Install-OpenCV-Jetson-Nano/raw/main/OpenCV-4-5-0.sh
+
+sudo chmod 755 ./OpenCV-4-5-0.sh
+
+./OpenCV-4-5-0.sh
+
+sudo -H pip install -U jetson-stats
+
+sudo reboot
+
+## jetson_release
+
+
+
+
+
+#####>>hanjulssig
+
+
+# PyTorch 1.8.0 다운로드 및 dependencies 설치
+
+wget https://nvidia.box.com/shared/static/p57jwntv436lfrd78inwl7iml6p13fzh.whl -O torch-1.8.0-cp36-cp36m-linux_aarch64.whl
+
+sudo apt-get install python3-pip libopenblas-base libopenmpi-dev 
+
+# Cython, numpy, pytorch 설치
+
+pip3 install Cython
+
+pip3 install numpy torch-1.8.0-cp36-cp36m-linux_aarch64.whl
+
+# torchvision dependencies 설치
+
+sudo apt-get install libjpeg-dev zlib1g-dev libpython3-dev libavcodec-dev libavformat-dev libswscale-dev
+
+git clone --branch v0.9.0 https://github.com/pytorch/vision torchvision
+
+cd torchvision
+
+export BUILD_VERSION=0.9.0
+
+python3 setup.py install --user
+
+cd ../  # attempting to load torchvision from build dir will result in import error
+
+
+#######################################
+
+# go github download zip. and change folder name to yolov5
+
+
+# yolov5s.pt weight 다운로드
+
+wget https://github.com/ultralytics/yolov5/releases/download/v6.0/yolov5s.pt
+
+
+
+
+##########################################
+# 다음 내용 requirements.txt에서 제거
+
+numpy>=1.18.5
+
+opencv-python>=4.1.2
+
+torch>=1.7.0
+
+torchvision>=0.8.1
+
+tensorboard 2.4.1dlsrk
+
+############################################
+
+python3 -m pip install --upgrade pip
+
+python3 -m pip install -r requirements.txt
+
+
+#########################
+#check
+
+# 연결된 webcam을 통해 Inference 수행하기
+
+python3 detect.py --source 0
