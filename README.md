@@ -314,7 +314,7 @@ roslaunch astra_camera astra.launch
 
 
 
-#after seame
+## after seame
 
 #check  https://whiteknight3672.tistory.com/316
 
