@@ -255,3 +255,53 @@ rosrun todo todo
 >You can see this picture
 
 ![rqt_graph](https://github.com/AveesLab/sea-me-hackathon-2024/assets/78201406/a55781e3-d396-42e0-a811-7b0e72f5938b)
+
+
+#################################################
+
+## to use orbbec astro pro plus
+check
+https://github.com/orbbec/ros_astra_camera
+
+if cmake error 
+https://jstar0525.tistory.com/306
+
+# Assuming you have sourced the ros environment, same below
+sudo apt install libgflags-dev  ros-$ROS_DISTRO-image-geometry ros-$ROS_DISTRO-camera-info-manager\
+ros-$ROS_DISTRO-image-transport ros-$ROS_DISTRO-image-publisher  libusb-1.0-0-dev libeigen3-dev
+
+
+git clone https://github.com/libuvc/libuvc.git
+cd libuvc
+mkdir build && cd build
+cmake .. && make -j4
+sudo make install
+sudo ldconfig
+
+cs
+ git clone https://github.com/orbbec/ros_astra_camera.git
+
+cm
+
+#there will be a error CMake Error at /opt/ros/melodic/share/image_geometry/cmake/image_geometryConfig.cmake:113 (message): Project 'image_geometry' specifies '/usr/include/opencv' as an include dir, which is not found. It does neither exist as an absolute directory nor in '${{prefix}}//usr/include/opencv'. Check the website 'http://www.ros.org/wiki/image_geometry' for information and consider reporting the problem.
+
+pkg-config --cflags opencv
+
+pkg-config --cflags opencv3
+pkg-config --cflags opencv4
+
+sudo gedit /opt/ros/melodic/share/image_geometry/cmake/image_geometryConfig.cmake
+
+line 96 opencv -> opencv4
+
+cw
+source ./devel/setup.bash
+roscd astra_camera
+./scripts/create_udev_rules
+sudo udevadm control --reload && sudo  udevadm trigger
+
+source ./devel/setup.bash 
+roslaunch astra_camera astra.launch
+
+
+
