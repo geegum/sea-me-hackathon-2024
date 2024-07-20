@@ -145,6 +145,7 @@ sudo gedit ~/.bashrc
 ++ alias cb='source ~/catkin_ws/devel/setup.bash'
 ++ alias sb='source ~/.bashrc'
 ++ alias sd=source devel/setup.bash'
+++ alias eb='sudo gedit ~/.bashrc'
 
 ```
 ```
