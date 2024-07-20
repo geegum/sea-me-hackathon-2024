@@ -484,3 +484,23 @@ python3 -m pip install -r requirements.txt
 # 연결된 webcam을 통해 Inference 수행하기
 
 python3 detect.py --source 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## using gpu to train yolo
+
+python train.py --img 640 --batch 16 --epochs 300 --data dataset.yaml --weights yolov5s.pt --project runs/train --name exp1
