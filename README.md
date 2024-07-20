@@ -144,6 +144,8 @@ sudo gedit ~/.bashrc
 ++ alias cm='cd ~/catkin_ws && catkin_make'
 ++ alias cb='source ~/catkin_ws/devel/setup.bash'
 ++ alias sb='source ~/.bashrc'
+++ alias sd=source devel/setup.bash'
+
 ```
 ```
 source ~/.bashrc
