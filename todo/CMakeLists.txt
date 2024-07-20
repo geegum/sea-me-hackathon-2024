@@ -20,6 +20,8 @@ include_directories(
 
 set(PROJECT_SOURCES
   src/todo.cpp
+  src/depth_cam.py
+  src/camcam.py
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
