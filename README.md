@@ -303,6 +303,15 @@ sudo gedit /opt/ros/melodic/share/image_geometry/cmake/image_geometryConfig.cmak
 
 line 96 opencv -> opencv4
 
+line 119     3.2.0 -> 4.5.0
+
+pip3 install empy==3.3.2
+
+
+
+
+
+
 cw
 source ./devel/setup.bash
 roscd astra_camera
@@ -311,6 +320,33 @@ sudo udevadm control --reload && sudo  udevadm trigger
 
 source ./devel/setup.bash 
 roslaunch astra_camera astra.launch
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
