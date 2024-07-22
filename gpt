@@ -1,46 +1,122 @@
+#!/usr/bin/env python
+
+# -*- coding: utf-8 -*-
+
 import rospy
+from sensor_msgs.msg import Image
 from std_msgs.msg import Float32
-import socket
-import time
+from cv_bridge import CvBridge
+import cv2
+import numpy as np
 
-def start_socket_server():
-    host = '172.30.1.5'  # 소켓 서버의 IP 주소
-    port = 5001          # 소켓 서버의 포트 번호
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((host, port))
-    server_socket.listen(1)
-    print("TCP/IP 소켓 서버가 시작되었습니다.")
+steering_weight = 1.5 
+throttle_weight = 0.1 
 
-    client_socket, addr = server_socket.accept()
-    print('Connected by', addr)
+pub_steering = rospy.Publisher('/Steering', Float32, queue_size=1)
+pub_throttle = rospy.Publisher('/Throttle', Float32, queue_size=1)
 
-    # ROS 퍼블리셔 초기화
-    rospy.init_node('tcp_to_ros_publisher', anonymous=True)
-    pub_throttle = rospy.Publisher('/Throttle', Float32, queue_size=10)
-    pub_steering = rospy.Publisher('/Steering', Float32, queue_size=10)
-    rate = rospy.Rate(10)  # 10hz
+class CameraDisplay:
+    def __init__(self):
+        self.bridge = CvBridge()
+        self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.image_callback)
+
+        # Create trackbars for adjusting HSV threshold values
+        cv2.namedWindow("Thresholded Image")
+        cv2.createTrackbar("Hue Min", "Thresholded Image", 0, 180, self.update_threshold)
+        cv2.createTrackbar("Hue Max", "Thresholded Image", 180, 180, self.update_threshold)
+        cv2.createTrackbar("Sat Min", "Thresholded Image", 0, 255, self.update_threshold)
+        cv2.createTrackbar("Sat Max", "Thresholded Image", 255, 255, self.update_threshold)
+        cv2.createTrackbar("Val Min", "Thresholded Image", 250, 255, self.update_threshold)
+        cv2.createTrackbar("Val Max", "Thresholded Image", 255, 255, self.update_threshold)
+
+        self.lower_hsv = np.array([0, 0, 250])
+        self.upper_hsv = np.array([255, 255, 255])
+        self.last_image = None
+        self.throttle_value = 0.1
+
+    def update_threshold(self, _):
+        self.lower_hsv = np.array([cv2.getTrackbarPos("Hue Min", "Thresholded Image"),
+                                   cv2.getTrackbarPos("Sat Min", "Thresholded Image"),
+                                   cv2.getTrackbarPos("Val Min", "Thresholded Image")])
+        self.upper_hsv = np.array([cv2.getTrackbarPos("Hue Max", "Thresholded Image"),
+                                   cv2.getTrackbarPos("Sat Max", "Thresholded Image"),
+                                   cv2.getTrackbarPos("Val Max", "Thresholded Image")])
+
+    def image_callback(self, msg):
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        except Exception as e:
+            rospy.logerr("CvBridge Error: {}".format(e))
+            return
+
+        # Convert the image to HSV
+        hsv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
+
+        # Apply the threshold to the HSV image
+        thresholded_image = cv2.inRange(hsv_image, self.lower_hsv, self.upper_hsv)
+        
+        # Calculate the area of the left and right regions
+        h, w = thresholded_image.shape
+        wvX = np.arange(0, w)
+        wvY1 = np.arange(0, h)
+        wvY = (wvY1.reshape(480, 1)) / 10
+        wvXX = wvX - (w / 2)
+        tresh = thresholded_image / 255
+
+        tresh12 = tresh * wvXX
+        lineDetect = np.sum(tresh12)
+        
+        # Steering logic
+        if lineDetect > 500000:
+            rospy.loginfo("lineDetect: {}".format("right"))
+            pub_steering.publish(1)
+        elif lineDetect < -500000:
+            rospy.loginfo("lineDetect: {}".format("Left"))
+            pub_steering.publish(-1)
+        else:
+            rospy.loginfo("lineDetect: {}".format("gogo"))
+            normalized_value = lineDetect / 500000.0
+            rospy.loginfo("lineDetect: {}".format(normalized_value))
+            pub_steering.publish(normalized_value)
+        
+        # Movement detection logic
+        if self.last_image is not None:
+            diff = cv2.absdiff(self.last_image, cv_image)
+            non_zero_count = np.count_nonzero(diff)
+            rospy.loginfo("Non-zero count: {}".format(non_zero_count))
+            
+            if non_zero_count < 1000:  # Threshold for detecting movement, adjust as needed
+                self.throttle_value = min(self.throttle_value + 0.01, 1.0)
+            else:
+                self.throttle_value = max(self.throttle_value - 0.01, 0.1)
+        
+        pub_throttle.publish(self.throttle_value)
+        self.last_image = cv_image.copy()
+        
+        rospy.loginfo("Throttle: {}".format(self.throttle_value))
+        
+        # Display the original, HSV, and thresholded images
+        cv2.imshow("Camera Image", cv_image)
+        cv2.imshow("HSV Image", hsv_image)
+        cv2.imshow("Thresholded Image", thresholded_image)
+        cv2.waitKey(1)
+
+def shutdown_hook():
+    pub_throttle.publish(0.0)
+    rospy.loginfo("Shutdown: Throttle set to 0.0")
+
+def main():
+    rospy.init_node('camera_display', anonymous=True)
+    rospy.on_shutdown(shutdown_hook)
+    CameraDisplay()
 
     try:
-        while not rospy.is_shutdown():
-            data = client_socket.recv(1024).decode()  # 클라이언트로부터 데이터 수신
-            if data:
-                commands = data.split(";")
-                for command in commands:
-                    topic, value = command.split(",")
-                    try:
-                        value = float(value)
-                        if topic == "throttle":
-                            pub_throttle.publish(value)
-                            print(f"Published {value} to /Throttle")
-                        elif topic == "steering":
-                            pub_steering.publish(value)
-                            print(f"Published {value} to /Steering")
-                    except ValueError:
-                        print("Received non-float data.")
-            rate.sleep()
-    finally:
-        client_socket.close()
-        server_socket.close()
+        rospy.spin()
+    except KeyboardInterrupt:
+        print("Shutting down")
+        pub_throttle.publish(0.0)
+    
+    cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    start_socket_server()
+    main()
